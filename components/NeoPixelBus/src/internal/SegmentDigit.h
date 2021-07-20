@@ -27,9 +27,10 @@ License along with NeoPixel.  If not, see
 
 #ifdef ARDUINO
 #include <Arduino.h>
-#endif
-#include <memory.h>
+#else
 #include <stdint.h>
+#include <string.h>
+#endif
 
 enum LedSegment
 {
@@ -40,8 +41,24 @@ enum LedSegment
     LedSegment_E,
     LedSegment_F,
     LedSegment_G,
-    LedSegment_Decimal,
+    LedSegment_Decimal, // maybe jumpered to alternate custom segment
+    LedSegment_Custom, // generally not used but maybe connected to a custom segment
     LedSegment_COUNT
+};
+
+class NeoSevenSegCurrentSettings
+{
+public:
+    NeoSevenSegCurrentSettings(uint16_t segments, uint16_t decimal, uint16_t special = 0) :
+        SegmentTenthMilliAmpere(segments),
+        DecimalTenthMilliAmpere(decimal),
+        SpecialTenthMilliAmpere(special)
+    {
+    }
+
+    uint16_t SegmentTenthMilliAmpere;   // in 1/10th ma
+    uint16_t DecimalTenthMilliAmpere; // in 1/10th ma
+    uint16_t SpecialTenthMilliAmpere;  // in 1/10th ma
 };
 
 // ------------------------------------------------------------------------
@@ -55,6 +72,8 @@ enum LedSegment
 // ------------------------------------------------------------------------
 struct SevenSegDigit
 {
+    typedef NeoSevenSegCurrentSettings SettingsObject;
+
     // ------------------------------------------------------------------------
     // Construct a SevenSegDigit using 
     //   the default brightness to apply to all segments
@@ -78,7 +97,7 @@ struct SevenSegDigit
     //   the brightness to apply to them, (0-255)
     //   the default brightness to apply to those not set in the bitmask (0-255)
     // ------------------------------------------------------------------------
-    SevenSegDigit(char letter, uint8_t brightness, uint8_t defaultBrightness = 0);
+    SevenSegDigit(char letter, uint8_t brightness, uint8_t defaultBrightness = 0, bool maintainCase = false);
 
     // ------------------------------------------------------------------------
     // Construct a SevenSegDigit that will have its values set in latter operations
@@ -138,8 +157,28 @@ struct SevenSegDigit
     // ------------------------------------------------------------------------
     static SevenSegDigit LinearBlend(const SevenSegDigit& left, const SevenSegDigit& right, float progress);
 
+
+    uint32_t CalcTotalTenthMilliAmpere(const SettingsObject& settings)
+    {
+        auto total = 0;
+
+        for (uint8_t segment = LedSegment_A; segment < SegmentCount - 2; segment++)
+        {
+            total += Segment[segment] * settings.SegmentTenthMilliAmpere / Max;
+        }
+
+        total += Segment[SegmentCount - 2] * settings.DecimalTenthMilliAmpere / Max;
+        total += Segment[SegmentCount - 1] * settings.SpecialTenthMilliAmpere / Max;
+
+        return total;
+    }
+
     template <typename T_SET_TARGET> 
-    static void SetString(T_SET_TARGET& target, uint16_t indexDigit, const char* str, uint8_t brightness, uint8_t defaultBrightness = 0)
+    static void SetString(T_SET_TARGET& target, 
+            uint16_t indexDigit, 
+            const char* str, 
+            uint8_t brightness, 
+            uint8_t defaultBrightness = 0)
     {
         if (str == nullptr)
         {
@@ -150,7 +189,7 @@ struct SevenSegDigit
         const char* pIter = str;
 
         // digits are right to left
-        // so find the end
+        // so find the end and start there
         while (*pIter != '\0')
         {
             pIter++;
@@ -161,24 +200,50 @@ struct SevenSegDigit
         while (pIter >= pFirst)
         {
             bool decimal = false;
-            char value = *pIter;
+            bool special = false;
+            char value = *pIter--;
 
-            // check if merging a decimal is required
-            if (pIter > pFirst && (*pIter == '.' || *pIter == ','))
+            // must always be merged by previous char 
+            // (the one to the right)
+            // so if repeated ignore it
+            //
+            if (value == ':' || value == ';')
+            {
+                continue;
+            }
+
+            // check if merging a decimal with the next char is required
+            // (the one to the left)
+            //
+            if (pIter >= pFirst && (value == '.' || value == ','))
             {
                 // merge a decimal as long as they aren't the same
-                if (*(pIter - 1) != *pIter)
+                if (*(pIter) != value)
                 {
                     decimal = true;
-                    pIter--;
-                    value = *pIter; // use the next char
+                    value = *pIter--; // use the next char
                 }
+            }
+
+            // check next char for colon
+            // 
+            if (pIter >= pFirst && (*pIter == ':' || *pIter == ';'))
+            {
+                // the colon is custom extension using the decimal AND the special
+                // channels
+                special = true;
+                decimal = true;
+                pIter--; // skip colon
             }
 
             SevenSegDigit digit(value, brightness, defaultBrightness);
             if (decimal)
             {
                 digit.Segment[LedSegment_Decimal] = brightness;
+            }
+            if (special)
+            {
+                digit.Segment[LedSegment_Custom] = brightness;
             }
             target.SetPixelColor(indexDigit, digit);
             indexDigit++;
@@ -192,6 +257,7 @@ struct SevenSegDigit
     static const uint8_t SegmentCount = 9;
     uint8_t Segment[SegmentCount];
 
+    const static uint8_t Max = 255;
 
     // segment decode maps from ascii relative first char in map to a bitmask of segments
     //
@@ -203,4 +269,3 @@ struct SevenSegDigit
 protected:
     void init(uint8_t bitmask, uint8_t brightness, uint8_t defaultBrightness);
 };
-

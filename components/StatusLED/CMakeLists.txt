@@ -1,14 +1,11 @@
-set(COMPONENT_SRCS
-    "StatusLED.cpp"
+set(CUSTOM_DEPS
+    Config
+    OpenMRNIDF
+    NeoPixelBus
 )
 
-set(COMPONENT_ADD_INCLUDEDIRS "include" )
-
-set(COMPONENT_REQUIRES
-    "OpenMRNLite"
-    "NeoPixelBus"
-)
-
-register_component()
+idf_component_register(SRCS StatusLED.cpp
+                       INCLUDE_DIRS "include"
+                       REQUIRES "${CUSTOM_DEPS}")
 
 set_source_files_properties(StatusLED.cpp PROPERTIES COMPILE_FLAGS -Wno-ignored-qualifiers)

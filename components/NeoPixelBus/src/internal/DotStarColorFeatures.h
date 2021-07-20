@@ -26,11 +26,6 @@ License along with NeoPixel.  If not, see
 -------------------------------------------------------------------------*/
 #pragma once
 
-#ifndef pgm_read_byte
-#define pgm_read_byte(addr)   (*(const unsigned char *)(addr))
-#endif
-#include <stdint.h>
-
 class DotStar3Elements
 {
 public:

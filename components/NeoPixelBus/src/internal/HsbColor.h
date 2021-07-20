@@ -28,6 +28,8 @@ License along with NeoPixel.  If not, see
 
 #ifdef ARDUINO
 #include <Arduino.h>
+#else
+#include <stdint.h>
 #endif
 
 // ------------------------------------------------------------------------
@@ -49,6 +51,11 @@ struct HsbColor
     // Construct a HsbColor using RgbColor
     // ------------------------------------------------------------------------
     HsbColor(const RgbColor& color);
+
+    // ------------------------------------------------------------------------
+    // Construct a HsbColor using Rgb48Color
+    // ------------------------------------------------------------------------
+    HsbColor(const Rgb48Color& color);
 
     // ------------------------------------------------------------------------
     // Construct a HsbColor that will have its values set in latter operations
@@ -111,5 +118,7 @@ struct HsbColor
     float H;
     float S;
     float B;
-};
 
+private:
+    static void _RgbToHsb(float r, float g, float b, HsbColor* color);
+};

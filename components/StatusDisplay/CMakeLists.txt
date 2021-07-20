@@ -1,17 +1,17 @@
-set(COMPONENT_SRCS
-    "StatusDisplay.cpp"
+set(IDF_DEPS
+    driver
 )
 
-set(COMPONENT_ADD_INCLUDEDIRS "include" )
-
-set(COMPONENT_REQUIRES
-    "app_update"
-    "Configuration"
-    "DCCSignalGenerator"
-    "OpenMRNLite"
-    "LCCTrainSearchProtocol"
+set(CUSTOM_DEPS
+    Config
+    NvsManager
+    OpenMRNIDF
+    TrainSearchProtocol
 )
 
-register_component()
+idf_component_register(SRCS StatusDisplay.cpp StatusDisplayLCD.cpp StatusDisplayOLED.cpp
+                       INCLUDE_DIRS "include"
+                       PRIV_INCLUDE_DIRS "private_include"
+                       REQUIRES "${IDF_DEPS} ${CUSTOM_DEPS}")
 
-set_source_files_properties(StatusDisplay.cpp PROPERTIES COMPILE_FLAGS -Wno-ignored-qualifiers)
+set_source_files_properties(StatusLED.cpp PROPERTIES COMPILE_FLAGS -Wno-ignored-qualifiers)

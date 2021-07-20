@@ -8,5 +8,5 @@ sdkconfig.old
 docs/html
 docs/esp32cs.tag
 docs/warnings
-data/*.gz
+web/*.gz
 pcb/*.*-bak

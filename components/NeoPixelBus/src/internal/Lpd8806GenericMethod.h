@@ -37,20 +37,22 @@ License along with NeoPixel.  If not, see
 template<typename T_TWOWIRE> class Lpd8806MethodBase
 {
 public:
-	Lpd8806MethodBase(uint8_t pinClock, uint8_t pinData, uint16_t pixelCount, size_t elementSize, size_t settingsSize) :
+    typedef typename T_TWOWIRE::SettingsObject SettingsObject;
+
+    Lpd8806MethodBase(uint8_t pinClock, uint8_t pinData, uint16_t pixelCount, size_t elementSize, size_t settingsSize) :
         _sizeData(pixelCount * elementSize + settingsSize),
-		_sizeFrame((pixelCount + 31) / 32), 
-		_wire(pinClock, pinData)
+        _sizeFrame((pixelCount + 31) / 32), 
+        _wire(pinClock, pinData)
     {
         _data = static_cast<uint8_t*>(malloc(_sizeData));
-        memset(_data, 0, _sizeData);
+        // data cleared later in Begin()
     }
 
 #if !defined(__AVR_ATtiny85__) && !defined(ARDUINO_attiny)
-	Lpd8806MethodBase(uint16_t pixelCount, size_t elementSize, size_t settingsSize) :
-		Lpd8806MethodBase(SCK, MOSI, pixelCount, elementSize, settingsSize)
-	{
-	}
+    Lpd8806MethodBase(uint16_t pixelCount, size_t elementSize, size_t settingsSize) :
+        Lpd8806MethodBase(SCK, MOSI, pixelCount, elementSize, settingsSize)
+    {
+    }
 #endif
 
 
@@ -65,37 +67,37 @@ public:
     }
 
 #if defined(ARDUINO_ARCH_ESP32)
-	void Initialize(int8_t sck, int8_t miso, int8_t mosi, int8_t ss)
-	{
-		_wire.begin(sck, miso, mosi, ss);
-	}
+    void Initialize(int8_t sck, int8_t miso, int8_t mosi, int8_t ss)
+    {
+        _wire.begin(sck, miso, mosi, ss);
+    }
 #endif
 
     void Initialize()
     {
-		_wire.begin();
+        _wire.begin();
     }
 
     void Update(bool)
     {
-		_wire.beginTransaction();
+        _wire.beginTransaction();
 
         // start frame
-		for (size_t frameByte = 0; frameByte < _sizeFrame; frameByte++)
-		{
-			_wire.transmitByte(0x00);
-		}
+        for (size_t frameByte = 0; frameByte < _sizeFrame; frameByte++)
+        {
+            _wire.transmitByte(0x00);
+        }
         
         // data
-		_wire.transmitBytes(_data, _sizeData);
+        _wire.transmitBytes(_data, _sizeData);
         
         // end frame 
-		for (size_t frameByte = 0; frameByte < _sizeFrame; frameByte++)
-		{
-			_wire.transmitByte(0xff);
-		}
-	
-		_wire.endTransaction();
+        for (size_t frameByte = 0; frameByte < _sizeFrame; frameByte++)
+        {
+            _wire.transmitByte(0xff);
+        }
+    
+        _wire.endTransaction();
     }
 
     uint8_t* getData() const
@@ -108,11 +110,16 @@ public:
         return _sizeData;
     };
 
-private:
-	const size_t   _sizeData;   // Size of '_data' buffer below
-	const size_t   _sizeFrame;
+    void applySettings(const SettingsObject& settings)
+    {
+        _wire.applySettings(settings);
+    }
 
-	T_TWOWIRE _wire;
+private:
+    const size_t   _sizeData;   // Size of '_data' buffer below
+    const size_t   _sizeFrame;
+
+    T_TWOWIRE _wire;
     uint8_t* _data;       // Holds LED color values
 };
 
@@ -122,9 +129,14 @@ typedef Lpd8806MethodBase<TwoWireBitBangImple> Lpd8806Method;
 #include "TwoWireSpiImple.h"
 typedef Lpd8806MethodBase<TwoWireSpiImple<SpiSpeed20Mhz>> Lpd8806Spi20MhzMethod;
 typedef Lpd8806MethodBase<TwoWireSpiImple<SpiSpeed10Mhz>> Lpd8806Spi10MhzMethod;
+typedef Lpd8806MethodBase<TwoWireSpiImple<SpiSpeed5Mhz>> Lpd8806Spi5MhzMethod;
 typedef Lpd8806MethodBase<TwoWireSpiImple<SpiSpeed2Mhz>> Lpd8806Spi2MhzMethod;
+typedef Lpd8806MethodBase<TwoWireSpiImple<SpiSpeed1Mhz>> Lpd8806Spi1MhzMethod;
+typedef Lpd8806MethodBase<TwoWireSpiImple<SpiSpeed500Khz>> Lpd8806Spi500KhzMethod;
+
+typedef Lpd8806MethodBase<TwoWireSpiImple<SpiSpeedHz>> Lpd8806SpiHzMethod;
+
 typedef Lpd8806Spi10MhzMethod Lpd8806SpiMethod;
 #endif
-
 
 

@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ESP32 Command Station configuration and control portal">
+  <title>ESP32 Command Station</title>
+  <link rel="icon" type="image/png" href="loco-32x32.png">
+  <link rel="stylesheet" href="spectre.min.css">
+  <script src="cash.min.js"></script>
+  <style>
+    fieldset {
+      border-style: solid;
+      border-width: 0.1rem;
+      border-color: #606c76;
+      border-radius: 0.5rem;
+    }
+
+    #ws-status.flash {
+      animation-name: colorflash;
+      animation-duration: 1s;
+      animation-iteration-count: infinite;
+      animation-timing-function: linear;
+    }
+
+    @keyframes colorflash {
+      0% {
+        filter: invert(0.8) sepia(1) saturate(3);
+      }
+
+      50% {
+        filter: invert(0.5);
+      }
+
+      100% {
+        filter: invert(0.8) sepia(1) saturate(3);
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-dark">
+  <div class="hero hero-sm">
+    <div class="hero-body">
+      <h1>ESP32 Command Station
+        <div class="btn-group float-right">
+          <div class="tooltip tooltip-left" data-tooltip="Connection status"><i id="ws-status"
+              class="icon icon-wifi text-dark"></i></div>
+          <div class="tooltip tooltip-left" data-tooltip="Click/tap to send emergency
+stop to all active locomotives"><i class="icon icon-stop" id="ops_estop"></i></div>
+          <div class="tooltip tooltip-left" data-tooltip="Click/tap to turn on/off track power"><i
+              class="icon icon-shutdown text-error" id="ops_track_power"></i><small id="ops_usage"></small></div>
+          <div class="tooltip tooltip-left" data-tooltip="Click/tap to view currently active locomotives">
+            <svg class="icon text-light" fill="currentColor" version='1.1' xmlns='http://www.w3.org/2000/svg'
+              viewBox='0 0 470 470' xmlns:xlink='http://www.w3.org/1999/xlink' enable-background='new 0 0 470 470'
+              onclick="showActiveLocos(this);">
+              <g>
+                <path
+                  d='m404.791,457.196l-29.997-29.997c-0.005-0.005-28.072-28.072-28.072-28.072l36.805-5.254c4.018-0.573 6.851-4.239 6.392-8.272l-10.526-92.555c-0.431-3.79-3.638-6.652-7.452-6.652h-13.553v-24.788c13.911-3.38 24.273-15.934 24.273-30.87s-10.362-27.49-24.273-30.87v-55.694c0-4.143-3.358-7.5-7.5-7.5h-22.143c-2.519-31.78-20.901-59.163-47.208-74.211v-54.961c0-4.143-3.358-7.5-7.5-7.5h-78.115c-4.142,0-7.5,3.357-7.5,7.5v54.96c-26.307,15.048-44.689,42.431-47.208,74.211h-22.1c-4.142,0-7.5,3.357-7.5,7.5v55.694c-13.911,3.38-24.273,15.934-24.273,30.87s10.362,27.49 24.273,30.87v24.788h-13.554c-3.814,0-7.021,2.862-7.452,6.652l-10.526,92.555c-0.458,4.033 2.374,7.699 6.392,8.272l36.805,5.254-28.069,28.07c-0.001,0.001-30,30-30,30-2.145,2.146-2.787,5.371-1.626,8.174 1.161,2.803 3.896,4.63 6.929,4.63h328.975c3.034,0 5.768-1.827 6.929-4.63 1.16-2.803 0.519-6.028-1.626-8.174zm-37.131-226.461c0,9.248-7.524,16.772-16.773,16.772s-16.772-7.524-16.772-16.772 7.524-16.772 16.772-16.772 16.773,7.524 16.773,16.772zm-24.273-30.87c-13.911,3.38-24.272,15.934-24.272,30.87s10.362,27.49 24.272,30.87v24.788h-58.803v-62.337c24.67-15.375 41.739-41.849 44.16-72.386h14.643v48.195zm-143.013,86.529v-54.754c10.716,4.255 22.392,6.596 34.605,6.596 12.213,0 23.889-2.341 34.605-6.596v54.754h-69.21zm3.047-271.394h63.115v40.558c-9.869-3.525-20.492-5.452-31.558-5.452s-21.688,1.927-31.558,5.452v-40.558zm31.559,50.106c43.596,0 79.064,35.468 79.064,79.064s-35.468,79.064-79.064,79.064-79.064-35.468-79.064-79.064 35.467-79.064 79.064-79.064zm-132.639,165.629c0-9.248 7.524-16.772 16.773-16.772s16.772,7.524 16.772,16.772-7.524,16.772-16.772,16.772-16.773-7.524-16.773-16.772zm24.273,30.871c13.911-3.38 24.272-15.934 24.272-30.87s-10.362-27.49-24.272-30.87v-48.194h14.6c2.421,30.537 19.49,57.011 44.16,72.386v62.337h-58.761v-24.789zm-21.857,39.788h53.701l-3.913,64.934c-0.249,4.135 2.9,7.688 7.035,7.938 0.154,0.01 0.306,0.014 0.458,0.014 3.936,0 7.24-3.068 7.479-7.049l3.967-65.836h53.997l.01,75.804c0,4.143 3.359,7.5 7.501,7.499s7.5-3.358 7.499-7.501l-.01-75.802h53.946l3.513,65.862c0.213,4.001 3.523,7.101 7.483,7.101 0.134,0 0.27-0.003 0.406-0.011 4.136-0.221 7.311-3.753 7.09-7.889l-3.471-65.063h53.798l8.946,78.66-139.19,19.87-139.191-19.871 8.946-78.66zm129.185,113.532c0.352,0.05 0.706,0.075 1.06,0.075s0.708-0.025 1.06-0.075l92.097-13.148 23.223,23.222h-232.76l23.223-23.222 92.097,13.148zm-145.32,40.074l15-15h262.76l15,15h-292.76z' />
+                <path
+                  d='m234.979,185.604c22.846,0 41.433-18.587 41.433-41.433s-18.586-41.433-41.433-41.433-41.433,18.587-41.433,41.433 18.586,41.433 41.433,41.433zm0-67.866c14.575,0 26.433,11.857 26.433,26.433s-11.857,26.433-26.433,26.433-26.433-11.857-26.433-26.433 11.857-26.433 26.433-26.433z' />
+              </g>
+            </svg>
+          </div>
+        </div>
+      </h1>
+    </div>
+  </div>
+  <header class="navbar">
+    <section class="navbar-section btn-group">
+      <button class="btn btn-primary" onclick="showTab('#tab-throttle', this);">Throttle</button>
+      <button class="btn btn-primary" onclick="showTab('#tab-accessories', this);">Accessory Decoders</button>
+      <button class="btn btn-primary" onclick="showTab('#tab-roster', this);">Locomotive Roster</button>
+      <button class="btn btn-primary" onclick="showTab('#tab-olcbconfig', this);">OpenLCB Configuration</button>
+      <button class="btn btn-primary" onclick="showTab('#tab-ota', this);">Firmware Update</button>
+    </section>
+  </header>
+  <div class="container">
+    <div class="container" id="tab-throttle">
+      <div class="columns">
+        <div class="column col-3"><label>Locomotive Address<input class="form-input" type="number" readonly="true"
+              id="loco-address" value="0" /></label></div>
+        <div class="column col-3"><label for="loco-dir">Direction</label>
+          <button id="loco-dir" class="btn btn-primary"><i class="icon icon-forward"></i></button>
+        </div>
+        <div class="column">
+          <button class="btn btn-primary" onclick="showLocoSelect(this);">Change
+            Locomotive</button>
+        </div>
+      </div>
+      <div class="columns">
+        <div class="column">
+          <label for="loco-speed">Speed</label><input class="bar bar-slider" type="range" id="loco-speed" min="0"
+            max="126" value="0" />
+        </div>
+      </div>
+      <div class="columns">
+        <div class="column">Functions</div>
+      </div>
+      <div class="columns">
+        <div class="column"><button class="btn btn-primary" id="funct_0">FL<i class="icon"></i></button></div>
+        <div class="column"><button class="btn btn-primary" id="funct_1">F1<i class="icon"></i></button></div>
+        <div class="column"><button class="btn btn-primary" id="funct_2">F2<i class="icon"></i></button></div>
+        <div class="column"><button class="btn btn-primary" id="funct_3">F3<i class="icon"></i></button></div>
+        <div class="column"><button class="btn btn-primary" id="funct_4">F4<i class="icon"></i></button></div>
+      </div>
+      <div class="columns">
+        <div class="column"></div>
+        <div class="column"><button class="btn btn-primary" id="funct_5">F5<i class="icon"></i></button></div>
+        <div class="column"><button class="btn btn-primary" id="funct_6">F6<i class="icon"></i></button></div>
+        <div class="column"><button class="btn btn-primary" id="funct_7">F7<i class="icon"></i></button></div>
+        <div class="column"><button class="btn btn-primary" id="funct_8">F8<i class="icon"></i></button></div>
+      </div>
+      <details class="accordion" id="ext_funcs">
+        <summary class="accordion-header c-hand"><button id="btn-ext_funcs" class="btn btn-primary">F9-F28<i
+              class="icon icon-arrow-down"></i></button></summary>
+        <div class="accordion-body">
+          <div class="columns">
+            <div class="column"></div>
+            <div class="column"><button class="btn btn-primary" id="funct_9">F9<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_10">F10<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_11">F11<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_12">F12<i class="icon"></i></button></div>
+          </div>
+          <div class="columns">
+            <div class="column"></div>
+            <div class="column"><button class="btn btn-primary" id="funct_13">F13<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_14">F14<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_15">F15<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_16">F16<i class="icon"></i></button></div>
+          </div>
+          <div class="columns">
+            <div class="column"></div>
+            <div class="column"><button class="btn btn-primary" id="funct_17">F17<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_18">F18<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_19">F19<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_20">F20<i class="icon"></i></button></div>
+          </div>
+          <div class="columns">
+            <div class="column"></div>
+            <div class="column"><button class="btn btn-primary" id="funct_21">F21<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_22">F22<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_23">F23<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_24">F24<i class="icon"></i></button></div>
+          </div>
+          <div class="columns">
+            <div class="column"></div>
+            <div class="column"><button class="btn btn-primary" id="funct_25">F25<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_26">F26<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_27">F27<i class="icon"></i></button></div>
+            <div class="column"><button class="btn btn-primary" id="funct_28">F28<i class="icon"></i></button></div>
+          </div>
+        </div>
+      </details>
+      <div class="modal" id="loco-select">
+        <a href="#" class="modal-overlay" title="Cancel" onclick="toggleModal('#loco-select');"></a>
+        <div class="modal-container">
+          <div class="modal-header">
+            <button class="btn btn-primary float-right" title="Cancel" onclick="toggleModal('#loco-select');"><i
+                class="icon icon-cross"></i></button>
+            <div class="modal-title h5">Select Locomotive</div>
+          </div>
+          <div class="modal-body">
+            <table class="table table-stripped text-dark" id="loco-list">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Address</th>
+                </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+            <div id="loco-manual">
+              <label class="form-label text-dark" for="loco-manual-address">Address</label>
+              <input class="form-input" type="number" pattern="[0-9]*" id="loco-manual-address" value="1" min="1"
+                max="16384">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="loco-select-add" class="btn btn-primary" title="Manual"><i
+                class="icon icon-plus"></i></button>
+            <button id="loco-select-select" class="btn btn-primary" title="Select"><i
+                class="icon icon-check"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container" style="display:none;" id="tab-accessories">
+      <div class="empty bg-dark" id="accessories-empty">
+        <div class="empty-title">No accesosry decoders have been registered yet</div>
+        <div class="empty-subtitle">Click the add button below to register an accessory decoder.</div>
+      </div>
+      <div class="container">
+        <table class="table table-stripped" id="accessories-table">
+          <thead>
+            <tr>
+              <th>Address</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>State</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+      <div class="container">
+        <button id='accessory-create' title='Create' class='btn btn-lg btn-action btn-primary'><i
+            class="icon icon-plus"></i></button>
+        <button id='accessory-refresh' title='Refresh' class='btn btn-lg btn-action btn-primary'
+          onclick="$(this).toggleClass('loading');refreshAccessories(this);"><i
+            class="icon icon-refresh"></i></button>
+      </div>
+      <div id="accessory-editor" class="modal">
+        <a href="#" class="modal-overlay" title="Cancel" onclick="toggleModal('#accessory-editor');"></a>
+        <div class="modal-container">
+          <div class="modal-header">
+            <div class="modal-title h5">Accessory Decoder Editor</div>
+          </div>
+          <div class="modal-body">
+            <div class="columns">
+              <div class="column">
+                <label class="form-label text-dark" for="accessory-address">Address:</label>
+                <input type="number" pattern="[0-9]*" id="accessory-address" value="1" min="1" max="2044">
+              </div>
+              <div class="column">
+                <label class="form-label text-dark" for="accessory-name">Name:</label>
+                <input type="text" id="accessory-name" maxlength="64">
+              </div>
+              <div class="column">
+                <label class="form-label text-dark" for="accessory-type">Type:</label>
+                <select id="accessory-type">
+                  <option value="0">Left diverging switch</option>
+                  <option value="1">Right diverging switch</option>
+                  <option value="2">Wye switch</option>
+                  <option value="3">Multi-directional switch</option>
+                  <option value="4">Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="columns">
+              <div class="column-12">
+                <label class="form-switch">
+                  <input type="checkbox" id="accessory-olcb" onclick="toggleOpenLCBAccessoryDecoder(this);">
+                  <i class="form-icon"></i><span class="text-dark">Send OpenLCB Event instead of DCC packet(s)?</span>
+                </label>
+              </div>
+            </div>
+            <div id="accessory-olcb-events" style="display:none;">
+              <div class="columns">
+                <div class="column">
+                  <label class="form-label text-dark" for="accessory_evt_closed">Closed event(s):</label>
+                  <div id="accessory_evt_closed"></div>
+                  <button class="btn btn-primary" onclick="addEventRow('accessory_evt_closed');"><i class="icon icon-plus"></i></button>
+                </div>
+                <div class="column">
+                  <label class="form-label text-dark" for="accessory_evt_thrown">Thrown event(s):</label>
+                  <div id="accessory_evt_thrown"></div>
+                  <button class="btn btn-primary" onclick="addEventRow('accessory_evt_thrown');"><i class="icon icon-plus"></i></button>
+                </div>
+              </div>
+          </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-primary float-right" title="Cancel" onclick="toggleModal('#accessory-editor');"><i
+                class="icon icon-cross"></i></button>
+            <button id="accessory-save" class="btn btn-primary" title="Save"><i
+                class="icon icon-check"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container" style="display:none;" id="tab-roster">
+      <div class="empty bg-dark" id="roster-empty">
+        <div class="empty-title">No locomotives have been created yet</div>
+        <div class="empty-subtitle">Click the add button below to create a locomotive.</div>
+      </div>
+      <div class="container">
+        <table class="table table-stripped" id="roster-table">
+          <thead>
+            <tr>
+              <th>Address</th>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Automatic Active</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+      <div class="container">
+        <button id='roster-create' title='Create' class='btn btn-lg btn-action btn-primary'
+          onclick="clearRosterEditor();toggleModal('#roster-editor');"><i class="icon icon-plus"></i></button>
+        <button id='roster-refresh' title='Refresh' class='btn btn-lg btn-action btn-primary'
+          onclick="$(this).toggleClass('loading');refreshRoster(this);"><i class="icon icon-refresh"></i></button>
+      </div>
+      <div id="roster-editor" class="modal">
+        <a href="#" class="modal-overlay" title="Cancel" onclick="toggleModal('#roster-editor');"></a>
+        <div class="modal-container">
+          <div class="modal-header">
+            <div class="modal-title h5">Locomotive Editor</div>
+          </div>
+          <div class="modal-body">
+            <label class="form-label text-dark" for="roster-addr">Address:</label>
+            <input type="number" pattern="[0-9]*" id="roster-addr" value="1" min="1" max="16384" />
+            <label class="form-label text-dark" for="roster-mode">Mode:</label>
+            <select id="roster-mode">
+              <option value="0">DCC (default, 128 speed steps)</option>
+              <!--option value="9">DCC (14 speed steps)</option -->
+              <option value="10">DCC (28 speed steps)</option>
+              <option value="11">DCC (128 speed steps)</option>
+              <!-- option value="13">DCC (14 speed steps, force long address)</option -->
+              <option value="14">DCC (28 speed steps, force long address)</option>
+              <option value="15">DCC (128 speed steps, force long address)</option>
+            </select>
+            <label class="form-label text-dark" for="roster-name">Name:</label>
+            <input type="text" id="roster-name" value="" maxlength="62" />
+            <label class="form-label text-dark" for="roster-desc">Description:</label>
+            <input type="text" id="roster-desc" value="" maxlength="63" />
+            <label class="form-switch">
+              <input type="checkbox" id="roster-idle">
+              <i class="form-icon"></i><span class="text-dark">Automatically add this locomotive to the "Active
+                Locomotives" list on Command Station startup?</span>
+            </label>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-primary float-right" title="Cancel" onclick="toggleModal('#roster-editor');"><i
+                class="icon icon-cross"></i></button>
+            <button id="roster-save" class="btn btn-primary" title="Save" onclick="saveLoco();"><i
+                class="icon icon-check"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container" style="display:none;" id="tab-olcbconfig">
+      <ul class="tab tab-block">
+        <li class="tab-item">
+          <a href="#" onclick="showCDISection('node_info',this);">Node Info</a>
+        </li>
+        <li class="tab-item">
+          <a href="#" onclick="showCDISection('track',this);">Track Configuration</a>
+        </li>
+        <li class="tab-item">
+          <a href="#" onclick="showCDISection('thermal',this);">Thermal Monitoring Configuration</a>
+        </li>
+        <li class="tab-item">
+          <a href="#" onclick="showCDISection('wifi',this);">WiFi Configuration</a>
+        </li>
+      </ul>
+      <div id="cdi_tab_node_info">
+        <div class="columns">
+          <div class="column"><label class="form-label" for="node_id">Node ID:</label></div>
+          <div class="column column-6"><input class="form-input" id="node_id" oninput="enable_button('save_node_id');">
+          </div>
+          <div class="column"><button class="btn btn-primary btn-sm" id="btn-save_node_id" disabled
+              onclick="save_node_id(this);">Save</button></div>
+        </div>
+        <div class="columns">
+          <div class="column"><label class="form-label" for="sw_version">Software Version:</label></div>
+          <div class="column column-6" id="sw_version"></div>
+          <div class="column"></div>
+        </div>
+        <div class="columns">
+          <div class="column"><label class="form-label" for="hw_version">Hardware Version:</label></div>
+          <div class="column column-6" id="hw_version"></div>
+          <div class="column"></div>
+        </div>
+        <div id="node_info_dynamic"></div>
+        <div id="status_led">
+          <div class="columns">
+            <div class="column">
+              <label for="led-brightness">Status LED Brightness:</label>
+            </div>
+            <div class="column column-6"><input class="bar bar-slider" type="range" id="led-brightness" min="8" max="255"
+                value="128" onchange="statusLEDChange(this);" />
+            </div>
+            <div class="column"></div>
+          </div>
+          <div class="columns">
+            <div class="column">
+              <small>This controls the brightness of the on-board RGB Status LEDs. The minimum value is 8 and maximum of 255, however, values over 200 are not discernable.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="cdi_tab_track" style="display:none;"></div>
+      <div id="cdi_tab_thermal" style="display:none;"></div>
+      <div id="cdi_tab_wifi" style="display:none;"></div>
+      <div class="columns">
+        <div class="column"><button class="btn btn-primary btn-sm" onclick="factory_reset();">Factory Reset</button>
+        </div>
+        <div class="column" id="bootloader"><button class="btn btn-primary btn-sm" onclick="request_bootloader();">Enter
+            Bootloader</button>
+        </div>
+        <div class="column"><button class="btn btn-primary btn-sm" onclick="reset_events();">Reset Events</button></div>
+        <div class="column"><button class="btn btn-primary btn-sm" onclick="update_complete();">Update Complete</button>
+        </div>
+      </div>
+    </div>
+    <div class="container" style="display:none;" id="tab-ota">
+      <div class="columns">
+        <form id="cs-ota-form" class="form-horizontal">
+          <div class="input-group">
+            <span class="input-group-addon addon-lg text-light bg-dark">Firmware:</span>
+            <input class="form-input input-lg" type="file" name="cs-ota-firmware"
+              placeholder="ESP32CommandStation.bin" />
+            <button class="btn btn-primary input-group-btn btn-lg" id="cs-ota-upload">Upload</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="modal" id="active-locos">
+      <a href="#" class="modal-overlay" title="Cancel" onclick="toggleModal('#active-locos');"></a>
+      <div class="modal-container">
+        <div class="modal-header">
+          <button class="btn btn-primary float-right" title="Cancel" onclick="toggleModal('#active-locos');"><i
+              class="icon icon-cross"></i></button>
+          <div class="modal-title h5">Active Locomotives</div>
+        </div>
+        <div class="modal-body">
+          <div class="empty" id="active-locos-empty">
+            <div class="empty-title h5">There are no active locomotives</div>
+          </div>
+          <table class="table table-stripped text-dark" id="active-locos-table">
+            <thead>
+              <tr>
+                <th>Address</th>
+                <th>Speed</th>
+                <th>Direction</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="text/javascript">
+    const ws_retry_connection_timeout_ms = 500;
+    const cs_status_interval_ms = 25000;
+    const page_reload_delay_ms = 7500;
+    const fetch_timeout_ms = 30000;
+    const accessory_types = ['Left diverging switch', 'Right diverging switch', 'Wye switch', 'Multi-directional switch', 'Other'];
+    const accessory_states = ['Closed', 'Thrown'];
+    const accessory_states_tooltip = ['Throw', 'Close'];
+    const accessory_icons = [
+      "icon-arrow-right", "icon-arrow-left", // left
+      "icon-arrow-left", "icon-arrow-right", // right
+      "icon-arrow-right", "icon-arrow-left", // wye
+      "icon-arrow-right", "icon-arrow-left", // multi
+      "icon-arrow-right", "icon-arrow-left", // other/unknown
+    ];
+    const ops_track_off_evt = '01.00.00.00.00.00.FF.FF';
+    const ops_track_on_evt = '01.00.00.00.00.00.FF.FE';
+    const estop_evt = '01.00.00.00.00.00.FF.FD';
+    const estop_clear_evt = '01.00.00.00.00.00.FF.FC';
+    var ops_track_overcurrent_evt = '';
+    var ops_track_shutdown_evt = '';
+
+    var loco_events = true;
+    var ws = null;
+    var ws_pending_send = [];
+    var ws_req_id = 0;
+    var cdi_loaded = false;
+    var cdi_loaders = [];
+    var cs_status_interval_timer_id = 0;
+
+    function get_ws_msg_id() {
+      ws_req_id++;
+      return ws_req_id;
+    }
+    async function fetchWithTimeout(resource, options) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), fetch_timeout_ms);
+      const response = await fetch(resource, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(id);
+      if (!response.ok) {
+        const message = `An error has occured: ${response.status}`;
+        throw new Error(message);
+      }
+      return response;
+    }
+    function showTab(target, button) {
+      $('[id^=tab-]').hide();
+      $(button).parent().children().removeClass('active');
+      $(button).parent().children().addClass('inactive');
+      $(button).toggleClass('active');
+      $(button).toggleClass('inactive');
+      if (target === '#tab-olcbconfig') {
+        $(button).toggleClass('loading');
+        refreshCDI(button);
+      } else if (target === '#tab-accessories') {
+        $(button).toggleClass('loading');
+        refreshAccessories(button);
+      } else if (target === '#tab-roster') {
+        $(button).toggleClass('loading');
+        refreshRoster(button);
+      } else {
+        $(target).show();
+      }
+    }
+    function toggleModal(target) {
+      $(target).toggleClass('active');
+    }
+    function updateTrackPowerStatus(trackStatus, overcurrent = false) {
+      $('#ops_track_power').removeClass('loading text-success text-error');
+      if (trackStatus) {
+        if (overcurrent) {
+          $('#ops_track_power').addClass('text-warning');
+        } else {
+          $('#ops_track_power').addClass('text-success');
+        }
+      } else {
+        $('#ops_track_power').addClass('text-error');
+      }
+    }
+    function showActiveLocos(button) {
+      if (window.location.host.length) {
+        $(button).toggleClass('loading');
+        fetchWithTimeout('/locomotive').then(res => res.json()).then(data => {
+          $(button).toggleClass('loading');
+          if (data.length) {
+            var tbody = $('#active-locos-table tbody');
+            tbody.children().remove();
+            for (var idx in data) {
+              $(tbody).append(String.format('<tr><td>{0}</td><td>{1}</td><td>{2}</td></tr>', data[idx].addr, data[idx].spd, data[idx].dir));
+            }
+            $('#active-locos-empty').hide();
+            $('#active-locos-table').show();
+          } else {
+            $('#active-locos-empty').show();
+            $('#active-locos-table').hide();
+          }
+          toggleModal('#active-locos');
+        }).catch(function (error) {
+          $(button).toggleClass('loading');
+          showErrorDialog('Failed to retrieve active locomotive list', error);
+          $('#active-locos-empty').show();
+          $('#active-locos-table').hide();
+          toggleModal('#active-locos');
+        });
+      } else {
+        $('#active-locos-empty').show();
+        $('#active-locos-table').hide();
+        toggleModal('#active-locos');
+      }
+    }
+    function showErrorDialog(text, error) {
+      error = typeof error !== 'undefined' ? error : "";
+      console.error(text, error);
+      alert(text);
+    }
+    function reload_page() {
+      clearInterval(cs_status_interval_timer_id);
+      ws_cleanup();
+      setTimeout(function () { location.reload(); }, page_reload_delay_ms);
+    }
+    function ws_cleanup() {
+      if (ws) {
+        ws.removeEventListener('open', ws_opened);
+        ws.removeEventListener('message', ws_rx);
+        ws.removeEventListener('error', ws_closed);
+        ws.removeEventListener('close', ws_closed);
+        ws.close();
+      }
+    }
+    function ws_dead() {
+      if (ws) {
+        ws.close();
+      }
+      connectWebSocket();
+    }
+    function cs_status() {
+      ws_tx(JSON.stringify({
+        req: 'status',
+        id: get_ws_msg_id()
+      }));
+    }
+    function ws_rx(event) {
+      var messages = event.data.split(/[\r\n]+/);
+      messages.forEach(msg => {
+        if (msg.length > 0) {
+          console.debug('WS-RX:', msg);
+          var json = JSON.parse(msg);
+          if (!json.hasOwnProperty('res')) {
+            console.error('Invalid JSON payload (missing res element):', msg);
+          } else if (json.res === 'error') {
+            showErrorDialog(json.error);
+          } else if (json.res === 'info') {
+            $('#node_id').val(pad_hex(json.node_id, 12));
+            $('#sw_version').text(json.snip_sw);
+            $('#hw_version').text(json.snip_hw);
+            $('#btn-save_node_id').removeClass('loading');
+            if (json.statusLED === false) {
+              $('#status_led').hide();
+            } else {
+              $('#led-brightness').val(json.statusLEDBrightness);
+            }
+            if (json.bootloader === false) {
+              $('#bootloader').hide();
+            }
+            cs_status();
+            cs_status_interval_timer_id = setInterval(cs_status, cs_status_interval_ms);
+          } else if (json.res === 'saved') {
+            reset_cdi_buttons(json.tgt);
+          } else if (json.res === 'field') {
+            if (json.type === 'evt') {
+              $('#' + json.tgt).val(pad_hex(json.val, 16));
+            } else {
+              $('#' + json.tgt).val(json.val);
+            }
+            reset_cdi_buttons(json.tgt);
+          } else if (json.res === 'nodeid' || json.res === 'factory-reset') {
+            reload_page();
+          } else if (json.res === 'reset-events') {
+            refresh_all_fields();
+          } else if (json.res === 'loco') {
+            loco_events = false;
+            $("#loco-address").val(json.addr);
+            $("#loco-speed").val(json.spd);
+            $('#loco-dir i').removeClass('icon-back icon-forward');
+            if (json.dir) {
+              $('#loco-dir i').addClass('icon-back');
+            } else {
+              $('#loco-dir i').addClass('icon-forward');
+            }
+            loco_events = true;
+          } else if (json.res === 'function') {
+            $(String.format('#funct_{0} i', json.fn)).removeClass('icon-circle-check');
+            if (json.state) {
+              $(String.format('#funct_{0} i', json.fn)).addClass('icon-circle-check');
+            }
+          } else if (json.res === 'accessory') {
+            if (json.tgt !== '') {
+              $('#' + json.tgt).removeClass('loading');
+            }
+            if (json.act === 'delete' || json.act === 'save') {
+              refreshAccessories(null);
+            }
+            else {
+              $(String.format("#accessory_{0}_addr", json.addr)).text(json.addr);
+              if (json.hasOwnProperty('type') && json.type < accessory_types.length) {
+                console.debug('accessory type change', $(String.format("#accessory_{0}_type", json.addr)).data('type'),'->', json.type);
+                $(String.format("#accessory_{0}_type", json.addr)).text(accessory_types[json.type]);
+                $(String.format("#accessory_{0}_type", json.addr)).data('type', json.type);
+              }
+              if (json.hasOwnProperty('state')) {
+                var type = parseInt($(String.format("#accessory_{0}_type", json.addr)).data('type'));
+                console.debug('accessory', json.addr, 'type', type, 'state', json.state, 'icon', accessory_icons[(type * 2) + json.state]);
+                $(String.format("#accessory_{0}_toggle i", json.addr)).removeClass('icon-arrow-left icon-arrow-right');
+                $(String.format("#accessory_{0}_toggle i", json.addr)).addClass(accessory_icons[(type * 2) + json.state]);
+                $(String.format("#accessory_{0}_toggle", json.addr)).attr('data-tooltip', accessory_states_tooltip[json.state]);
+                $(String.format("#accessory_{0}_state", json.addr)).text(accessory_states[json.state]);
+              }
+            }
+          } else if (json.res === 'roster') {
+            if (json.tgt !== '') {
+              $('#' + json.tgt).removeClass('loading');
+            }
+            if (json.act === 'delete' || json.act === 'save') {
+              refreshRoster(null);
+            }
+          } else if (json.res === 'event') {
+            if (json.evt === ops_track_on_evt) {
+              cs_status();
+            } else if (json.evt === ops_track_off_evt) {
+              cs_status();
+            } else if (json.evt === estop_clear_evt) {
+              $('#ops_estop').removeClass('text-error');
+            } else if (json.evt === estop_evt) {
+              $('#ops_estop').addClass('text-error');
+            }
+          } else if (json.res === 'pong') {
+          } else if (json.res === 'status') {
+            updateTrackPowerStatus(json.track !== 'Off',
+              (json.track === 'Fault' || json.track === 'Shutdown'));
+            if (json.hasOwnProperty("usage")) {
+              $('#ops_usage').text(String.format('{0} mA', json.usage));
+            } else {
+              $('#ops_usage').text('');
+            }
+          }
+        }
+      });
+    }
+    function ws_tx(msg) {
+      // if the socket is not in an open state, defer the send until we have connected
+      if (!ws || ws.readyState != WebSocket.OPEN) {
+        ws_pending_send.push(msg);
+        // if we are not already trying to connect try and connect now
+        if (!ws || ws.readyState != WebSocket.CONNECTING) {
+          connectWebSocket();
+        }
+        return;
+      }
+      console.debug('WS-TX:', msg);
+      ws.send(msg);
+    }
+    function ws_opened(event) {
+      $('#ws-status').removeClass('flash text-dark');
+      $('#ws-status').addClass('text-success');
+      while (ws_pending_send.length) {
+        ws.send(ws_pending_send.pop());
+      }
+    }
+    function ws_closed(event) {
+      console.warn('WS closed, reconnecting. Reason:', event.reason);
+      $('#ws-status').addClass('text-dark');
+      $('#ws-status').removeClass('text-success');
+    }
+    function connectWebSocket() {
+      if (!window.location.host.length) {
+        while (ws_pending_send.length) {
+          console.log('WS-OFFLINE:', ws_pending_send.pop());
+        }
+        return;
+      }
+      $('#ws-status').addClass('flash');
+      var socketUrl = String.format('ws://{0}:{1}/ws', window.location.host, window.location.port);
+      try {
+        ws = new WebSocket(socketUrl);
+        ws.addEventListener('open', ws_opened);
+        ws.addEventListener('message', ws_rx);
+        ws.addEventListener('error', ws_closed);
+        ws.addEventListener('close', ws_closed);
+      } catch (e) {
+        console.error('Failed to connect to the command station, will retry');
+        $('#ws-status').addClass('text-dark');
+        $('#ws-status').removeClass('flash text-success');
+        setTimeout(connectWebSocket, ws_retry_connection_timeout_ms);
+      }
+    }
+    $(function () {
+      if (!String.format) {
+        String.format = function (format) {
+          var args = Array.prototype.slice.call(arguments, 1);
+          return format.replace(/{(\d+)}/g, function (match, number) {
+            return typeof args[number] != 'undefined'
+              ? args[number]
+              : match
+              ;
+          });
+        };
+      }
+      if (window.location.host.length) {
+        ws_tx(JSON.stringify({
+          req: 'info',
+          id: get_ws_msg_id()
+        }));
+        window.addEventListener('beforeunload', ws_cleanup);
+      }
+      setupThrottle();
+      setupAccessories();
+    });
+    function toggleOpenLCBAccessoryDecoder(toggle) {
+      if ($(toggle).prop('checked')) {
+        $('#accessory-olcb-events').show();
+      } else {
+        $('#accessory-olcb-events').hide();
+      }
+    }
+    function statusLEDChange(slider) {
+      ws_tx(JSON.stringify({
+        req: 'statusled',
+        val: parseInt($(slider).val()),
+        id: get_ws_msg_id()
+      }));
+    }
+    function setupThrottle() {
+      disableLocoInputs();
+      $('#btn-ext_funcs').on('click', function () {
+        var icon = $('#ext_funcs').contents().find('i').first();
+        if ($('#ext_funcs').attr('open')) {
+          $('#ext_funcs').removeAttr('open');
+        } else {
+          $('#ext_funcs').attr('open', 'open');
+        }
+        $(icon).toggleClass('icon-arrow-down');
+        $(icon).toggleClass('icon-arrow-up');
+      });
+      $("#loco-speed").on("change", function (event, ui) {
+        if (loco_events) {
+          ws_tx(JSON.stringify({
+            req: 'loco',
+            addr: parseInt($("#loco-address").val()),
+            spd: parseInt($("#loco-speed").val()),
+            id: get_ws_msg_id()
+          }));
+        }
+      });
+      $('#loco-select-select').on('click', function () {
+        toggleModal('#loco-select');
+        changeLocomotive($('#loco-manual-address').val());
+      })
+      $("#loco-select-add").on("click", function () {
+        $("#loco-list").hide();
+        $("#loco-manual").show();
+      });
+      $("#loco-dir").on('click', function () {
+        ws_tx(JSON.stringify({
+          req: 'loco',
+          addr: parseInt($("#loco-address").val()),
+          dir: $('#loco-dir i').hasClass('icon-forward'),
+          id: get_ws_msg_id()
+        }));
+      });
+      $('[id^=funct_]').on('click', function (event) {
+        var target = event.target;
+        if ($(target).hasClass('icon')) {
+          target = $(target).parent();
+        }
+        var id = $(target).prop('id').match(/.*(\d+).*/)[1];
+        ws_tx(JSON.stringify({
+          req: 'function',
+          addr: parseInt($("#loco-address").val()),
+          fn: parseInt(id),
+          state: !$(String.format('#funct_{0} i', id)).hasClass('icon-circle-check'),
+          id: get_ws_msg_id()
+        }));
+      });
+      $('#ops_track_power').on('click', function (event) {
+        if ($(this).hasClass('text-error')) {
+          ws_tx(JSON.stringify({
+            req: 'event',
+            evt: ops_track_on_evt,
+            id: get_ws_msg_id()
+          }));
+        } else {
+          ws_tx(JSON.stringify({
+            req: 'event',
+            evt: ops_track_off_evt,
+            id: get_ws_msg_id()
+          }));
+        }
+        $('this').toggleClass('loading');
+      });
+      $('#ops_estop').on('click', function (event) {
+        if ($(this).hasClass('text-error')) {
+          ws_tx(JSON.stringify({
+            req: 'event',
+            evt: estop_clear_evt,
+            id: get_ws_msg_id()
+          }));
+        } else {
+          ws_tx(JSON.stringify({
+            req: 'event',
+            evt: estop_evt,
+            id: get_ws_msg_id()
+          }));
+        }
+      });
+    }
+    function showLocoSelect(button) {
+      if (window.location.host.length) {
+        $("#loco-manual").hide();
+        $(button).toggleClass('loading');
+        fetchWithTimeout('/locomotive/roster').then(res => res.json()).then(data => {
+          $(button).toggleClass('loading');
+          if (data.length) {
+            var tbody = $('#loco-list tbody');
+            var count = 0;
+            tbody.children().remove();
+            for (var idx in data) {
+              if (data[idx].default) {
+                count++;
+                $(tbody).append(String.format('<tr class="c-hand" onclick="changeLocomotive({1});"><td>{0}</td><td>{1}</td><td>{2}</td></tr>',
+                  data[idx].name, data[idx].desc, data[idx].addr));
+              }
+            }
+            if (count > 0) {
+              $("#loco-list").show();
+              $("#loco-select-add").show();
+            } else {
+              $("#loco-list").hide();
+              $("#loco-manual").show();
+              $("#loco-select-add").hide();
+            }
+          } else {
+            $("#loco-list").hide();
+            $("#loco-manual").show();
+            $("#loco-select-add").hide();
+          }
+          toggleModal('#loco-select');
+        }).catch(function (error) {
+          $(button).toggleClass('loading');
+          showErrorDialog('Failed to retrieve locomotive roster', error);
+          $("#loco-list").hide();
+          $("#loco-manual").show();
+          $("#loco-select-add").hide();
+          toggleModal('#loco-select');
+        });
+      } else {
+        $("#loco-list").hide();
+        $("#loco-manual").show();
+        $("#loco-select-add").hide();
+        toggleModal('#loco-select');
+      }
+    }
+    function removeEventRow(target) {
+      $('#' + target).remove();
+    }
+    function addEventRow(target, value = null) {
+      var id = String.format('{0}_{1}', target, Math.random()).replace(/\./g, '_');
+      if (value) {
+        $('#' + target).append(String.format('<div class="input-group" id="{0}"><input type="text" class="form-input" maxlength="23" value="{1}" placeholder="00.00.00.00.00.00.00.00"><button class="btn btn-primary input-group-btn" onclick="removeEventRow(\'{0}\');"><i class="icon icon-cross"></i></button></div>', id, pad_hex(value, 16)));
+      } else {
+        $('#' + target).append(String.format('<div class="input-group" id="{0}"><input type="text" class="form-input" maxlength="23" placeholder="00.00.00.00.00.00.00.00"><button class="btn btn-primary input-group-btn" onclick="removeEventRow(\'{0}\');"><i class="icon icon-cross"></i></button></div>', id));
+      }
+    }
+    function setupAccessories() {
+      $('#accessory-create').on('click', function () {
+        $('#accessory-address').val(1);
+        $('#accessory-type').val(0);
+        $('#accessory-olcb').prop('checked', false);
+        $('#accessory_evt_closed').children().remove();
+        $('#accessory_evt_thrown').children().remove();
+        toggleOpenLCBAccessoryDecoder($('#accessory-olcb'));
+        toggleModal('#accessory-editor');
+      });
+      $('#accessory-save').on('click', function () {
+        if ($('#accessory-olcb').prop('checked')) {
+          var closed_events = '';
+          var thrown_events = '';
+          $('#accessory_evt_closed input').each(function(idx, elem) {
+            var value = $(elem).val();
+            if (value.length) {
+              if (closed_events.length) {
+                closed_events += ',';
+              }
+              closed_events += value;
+            }
+          });
+          $('#accessory_evt_thrown input').each(function(idx, elem) {
+            var value = $(elem).val();
+            if (value.length) {
+              if (thrown_events.length) {
+                thrown_events += ',';
+              }
+              thrown_events += value;
+            }
+          });
+          ws_tx(JSON.stringify({
+            req: 'accessory',
+            act: 'save',
+            addr: parseInt($('#accessory-address').val()),
+            name: $('#accessory-name').val(),
+            type: parseInt($('#accessory-type').val()),
+            olcb: true,
+            closed: closed_events,
+            thrown: thrown_events,
+            id: get_ws_msg_id()
+          }));
+        } else {
+          ws_tx(JSON.stringify({
+            req: 'accessory',
+            act: 'save',
+            addr: parseInt($('#accessory-address').val()),
+            name: $('#accessory-name').val(),
+            type: parseInt($('#accessory-type').val()),
+            olcb: false,
+            id: get_ws_msg_id()
+          }));
+        }
+        toggleModal('#accessory-editor');
+      });
+    }
+    function refreshAccessories(button) {
+      if (window.location.host.length) {
+        fetchWithTimeout('/accessories').then(res => res.json()).then(data => {
+          if (button) {
+            $(button).toggleClass('loading');
+          }
+          if (data.length) {
+            var tbody = $('#accessories-table tbody');
+            tbody.children().remove();
+            for (var idx in data) {
+              var actions = String.format('<button class="btn btn-primary btn-sm tooltip" data-tooltip="Edit" onclick="editAccessory({0});"><i class="icon icon-edit"></i></button>',
+                data[idx].address);
+              actions += String.format('<button class="btn btn-primary btn-sm tooltip" data-tooltip="Delete" onclick="deleteAccessory({0});"><i class="icon icon-delete"></i></button>',
+                data[idx].address);
+              actions += String.format('<button id="accessory_{0}_toggle" class="btn btn-primary btn-sm tooltip" data-tooltip="{1}" onclick="toggleAccessory({0},this);"><i class="icon {2}"></i></button>',
+                data[idx].address, accessory_states_tooltip[data[idx].state], accessory_icons[(data[idx].type * 2) + data[idx].state]);
+              $(tbody).append(String.format('<tr><td id="accessory_{0}_addr">{0}</td><td id="accessory_{0}_name">{1}</td><td id="accessory_{0}_type" data-type="{2}">{3}</td><td id="accessory_{0}_state">{4}</td><td>{5}</td></tr>',
+                data[idx].address, data[idx].name, data[idx].type, accessory_types[data[idx].type], accessory_states[data[idx].state], actions));
+            }
+            $("#accessories-empty").hide();
+            $("#accessories-table").show();
+          } else {
+            $("#accessories-table").hide();
+            $("#accessories-empty").show();
+          }
+          $('#tab-accessories').show();
+        }).catch(function (error) {
+          if (button) {
+            $(button).toggleClass('loading');
+          }
+          showErrorDialog('Failed to retrieve accessory decoder list', error);
+          $("#accessories-table").hide();
+          $("#accessories-empty").show();
+          $('#tab-accessories').show();
+        });
+      } else {
+        $(button).toggleClass('loading');
+        $("#accessories-table").hide();
+        $("#accessories-empty").show();
+        $('#tab-accessories').show();
+      }
+    }
+    function editAccessory(address) {
+      fetchWithTimeout(String.format('/accessories?address={0}', address)).then(res => res.json()).then(data => {
+        $('#accessory-address').val(data.address);
+        $('#accessory-name').val(data.name);
+        $('#accessory-type').val(data.type);
+        $('#accessory_evt_closed').children().remove();
+        $('#accessory_evt_thrown').children().remove();
+        if (data.hasOwnProperty('olcb')) {
+          $('#accessory-olcb').prop('checked', true);
+          data.olcb.closed.split(/,/).forEach(event => {
+            addEventRow('accessory_evt_closed', event);
+          });
+          data.olcb.thrown.split(/,/).forEach(event => {
+            addEventRow('accessory_evt_thrown', event);
+          });
+        } else {
+          $('#accessory-olcb').prop('checked', false);
+        }
+        toggleOpenLCBAccessoryDecoder($('#accessory-olcb'));
+        toggleModal('#accessory-editor');
+      }).catch(function (error) {
+        showErrorDialog('Failed to retrieve accessory decoder details', error);
+      });
+    }
+    function deleteAccessory(address) {
+      ws_tx(JSON.stringify({
+        req: 'accessory',
+        addr: parseInt(address),
+        act: "delete",
+        id: get_ws_msg_id()
+      }));
+    }
+    function toggleAccessory(address, button) {
+      var target = $(button).attr('id');
+      $(button).toggleClass('loading');
+      ws_tx(JSON.stringify({
+        req: 'accessory',
+        addr: parseInt(address),
+        act: "toggle",
+        tgt: target,
+        id: get_ws_msg_id()
+      }));
+    }
+    function refreshRoster(button) {
+      if (window.location.host.length) {
+        fetchWithTimeout('/locomotive/roster').then(res => res.json()).then(data => {
+          if (button) {
+            $(button).toggleClass('loading');
+          }
+          if (data.length) {
+            var tbody = $('#roster-table tbody');
+            tbody.children().remove();
+            for (var idx in data) {
+              var actions = String.format('<button class="btn btn-primary btn-sm tooltip" data-tooltip="Edit" onclick="editLoco({0});"><i class="icon icon-edit"></i></button>',
+                data[idx].addr);
+              actions += String.format('<button class="btn btn-primary btn-sm tooltip" data-tooltip="Delete" onclick="deleteLoco({0});"><i class="icon icon-delete"></i></button>',
+                data[idx].addr);
+              $(tbody).append(String.format('<tr><td>{0}</td><td>{1}</td><td>{2}</td><td><i class="icon icon-{3}"></i></td><td>{4}</td></tr>',
+                data[idx].addr, data[idx].name, data[idx].desc, data[idx].idle ? 'check' : 'cross', actions));
+            }
+            $("#roster-empty").hide();
+            $("#roster-table").show();
+          } else {
+            $("#roster-table").hide();
+            $("#roster-empty").show();
+          }
+          $('#tab-roster').show();
+        }).catch(function (error) {
+          if (button) {
+            $(button).toggleClass('loading');
+          }
+          showErrorDialog('Failed to retrieve roster', error);
+          $("#roster-table").hide();
+          $("#roster-empty").show();
+          $('#tab-roster').show();
+        });
+      } else {
+        $("#roster-table").hide();
+        $("#roster-empty").show();
+        $('#tab-roster').show();
+      }
+    }
+    function clearRosterEditor() {
+      $('#roster-name').val("");
+      $('#roster-desc').val("");
+      $('#roster-addr').val(1);
+      $('#roster-idle').prop('checked', false);
+    }
+    function editLoco(address) {
+      if (window.location.host.length) {
+        fetchWithTimeout(String.format('/locomotive/roster?address={0}', address)).then(res => res.json()).then(data => {
+          $('#roster-name').val(data.name);
+          // 14 speed steps is not implemented, force type to DCC-128
+          if (data.mode.type === 9 || data.mode.type == 13) {
+            $('#roster-mode').val(11);
+          } else {
+            $('#roster-mode').val(data.mode.type);
+          }
+          $('#roster-desc').val(data.desc);
+          $('#roster-addr').val(data.addr);
+          $('#roster-idle').prop('checked', data.idle);
+          toggleModal('#roster-editor');
+        }).catch(function (error) {
+          showErrorDialog('Failed to retrieve roster entry', error);
+        });
+      }
+    }   
+    function deleteLoco(address) {
+      if (window.location.host.length) {
+        ws_tx(JSON.stringify({
+            req: 'roster',
+            act: 'delete',
+            addr: parseInt(address),
+            id: get_ws_msg_id()
+        }));
+      }
+    }
+    function saveLoco() {
+      if (window.location.host.length) {
+        ws_tx(JSON.stringify({
+            req: 'roster',
+            act: 'save',
+            addr: parseInt($('#roster-addr').val()),
+            name: $('#roster-name').val(),
+            mode: parseInt($('#roster-mode').val()),
+            desc: $('#roster-desc').val(),
+            idle: $('#roster-idle').prop('checked'),
+            id: get_ws_msg_id()
+        }));
+        toggleModal('#roster-editor');
+      }
+    }
+    function enableLocoInputs() {
+      $('[id^=funct_]').removeClass('disabled');
+      $('#loco-dir').removeClass('disabled');
+      $('#loco-speed').removeClass('disabled');
+    }
+    function disableLocoInputs() {
+      $('[id^=funct_]').addClass('disabled');
+      $('#loco-dir').addClass('disabled');
+      $('#loco-speed').addClass('disabled');
+    }
+    function changeLocomotive(newAddress) {
+      if (newAddress !== "") {
+        ws_tx(JSON.stringify({
+          req: 'loco',
+          addr: parseInt(newAddress),
+          spd: 0,
+          dir: false,
+          id: get_ws_msg_id()
+        }));
+        $('#loco-select').removeClass('active');
+        enableLocoInputs();
+      }
+    }
+    function refresh_all_cdi_fields() {
+      $('[id^=btn-refresh-]').each(function (i, e) {
+        refresh_cdi_field(e);
+      });
+    }
+    function showCDISection(section) {
+      $('[id^=cdi_tab_]').hide();
+      $(String.format('#cdi_tab_{0}', section)).show();
+    }
+    function refreshCDI(button) {
+      if (!cdi_loaded) {
+        fetchWithTimeout("/fs?path=/fs/cdi.xml&remove_nulls=true").then(res => res.text()).then(cdi => build_cdi_dom(cdi, button));
+      } else {
+        refresh_all_cdi_fields();
+        $(button).toggleClass('loading');
+        $('#tab-olcbconfig').show();
+      }
+    }
+    function save_node_id(button) {
+      $(button).addClass('loading');
+      disable_button('save_node_id');
+      ws_tx(JSON.stringify({
+        req: 'nodeid',
+        val: $('#node_id').val(),
+        id: get_ws_msg_id()
+      }));
+    }
+    function build_cdi_dom(cdi, button) {
+      cdi_loaders.splice(0, cdi_loaders.length);
+      var parser = new window.DOMParser();
+      var doc = parser.parseFromString(cdi, "text/xml");
+      var offsets_251 = calculate_offsets(doc, 251);
+      var offsets_253 = calculate_offsets(doc, 253);
+      cdi_dynamic_group(doc, 251, 'node_info', '#node_info_dynamic', offsets_251, '//segment[@space="251"]');
+      cdi_dynamic_group(doc, 253, 'Track Configuration', '#cdi_tab_track', offsets_253);
+      cdi_dynamic_group(doc, 253, 'Thermal Monitoring Configuration', '#cdi_tab_thermal', offsets_253);
+      cdi_dynamic_group(doc, 253, 'WiFi Configuration', '#cdi_tab_wifi', offsets_253);
+      cdi_loaders.forEach(elem => ws_tx(elem));
+      cdi_loaders.splice(0, cdi_loaders.length);
+      $('#tab-olcbconfig').show();
+      $(button).toggleClass('loading');
+      cdi_loaded = true;
+    }
+    function save_cdi_field(field) {
+      var target = $(field).attr('id').substr(9);
+      $(field).toggleClass('loading');
+      var size = parseInt($('#' + target).data('size'));
+      var type = $('#' + target).data('type');
+      var value = $('#' + target).val()
+      if (type === 'str') {
+        if (value.length < size) {
+          size = value.length;
+        } else {
+          value = value.substr(0, size);
+        }
+      }
+      ws_tx(JSON.stringify({
+        req: 'cdi',
+        ofs: parseInt($('#' + target).data('offset')),
+        sz: size,
+        type: type,
+        tgt: target,
+        val: value,
+        id: get_ws_msg_id()
+      }));
+    }
+    function refresh_cdi_field(field) {
+      var target = $(field).attr('id').substr(12);
+      $(field).toggleClass('loading');
+      ws_tx(JSON.stringify({
+        req: 'cdi',
+        ofs: $('#' + target).data('offset'),
+        sz: $('#' + target).data('size'),
+        type: $('#' + target).data('type'),
+        tgt: target,
+        id: get_ws_msg_id()
+      }));
+    }
+    function factory_reset() {
+      if (confirm('Are you sure you want to perform a Factory Reset?')) {
+        ws_tx(JSON.stringify({
+          req: 'factory-reset',
+          id: get_ws_msg_id()
+        }));
+      }
+    }
+    function request_bootloader() {
+      if (confirm('Are you sure you want to enter the bootloader?')) {
+        ws_tx(JSON.stringify({
+          req: 'bootloader',
+          id: get_ws_msg_id()
+        }));
+        clearInterval(cs_status_interval_timer_id);
+        ws.removeEventListener('error', ws_closed);
+        ws.removeEventListener('close', ws_closed);
+        alert('The request to enter the bootloader has sent.\n\nOnce the command station returns to normal operating mode, you will need to manually refresh this page.');
+      }
+    }
+    function reset_events() {
+      if (confirm('Are you sure you want to reset all event IDs?')) {
+        ws_tx(JSON.stringify({
+          req: 'reset-events',
+          id: get_ws_msg_id()
+        }));
+      }
+    }
+    function update_complete() {
+      ws_tx(JSON.stringify({
+        req: 'update-complete',
+        id: get_ws_msg_id()
+      }));
+    }
+    function reset_cdi_buttons(target) {
+      $(String.format('#btn-refresh-{0}', target)).removeClass('loading');
+      $(String.format('#btn-save-{0}', target)).removeClass('loading');
+      enable_button('refresh-' + target);
+      disable_button('save-' + target);
+    }
+    function pad_hex(str, length) {
+      var hex = new Array(length + 1).join('0') + str;
+      return hex.substr(-length).match(/.{1,2}/g).join('.');
+    }
+    function enable_button(field) {
+      console.debug('enabling:', '#btn-' + field);
+      $('#btn-' + field).removeAttr('disabled');
+    }
+    function disable_button(field) {
+      console.debug('disabling:', '#btn-' + field);
+      $('#btn-' + field).attr('disabled', true);
+    }
+    function process_group(group) {
+      var groupsize = 0;
+      if (group.nodeName == 'int' || group.nodeName == 'string') {
+        groupsize += parseInt($(group).attr('size'));
+      } else if (group.nodeName == 'eventid') {
+        groupsize += 8;
+      } else if (group.nodeName == 'group') {
+        if ($.isNumeric($(group).attr('offset'))) {
+          groupsize += parseInt($(group).attr('offset'));
+        }
+        $(group).children().each(function (i, c) {
+          groupsize += process_group(c);
+        });
+      }
+      return groupsize;
+    }
+    function calculate_offsets(cdi, space) {
+      var offsets = {};
+      var segment = $(cdi).find('segment').filter(
+        function (i, e) {
+          return parseInt($(e).attr('space')) === space && parseInt($(e).attr('origin')) > 0;
+        });
+      var offs = parseInt($(segment).attr('origin'));
+      $(segment).children().each(function (i, e) {
+        var group_name = 'unknown';
+        if (space === 251) {
+          group_name = 'node_info';
+        } else {
+          $(e.children).each(function (i, e) {
+            if (e.nodeName === 'name') {
+              group_name = $(e).text();
+            }
+          });
+        }
+        var replica_count = 1;
+        if ($(e).attr('replication')) {
+          replica_count = parseInt($(e).attr('replication'));
+        }
+        var groupsize = 0;
+        $(e.children).each(function (i, c) {
+          groupsize += process_group(c);
+        });
+        offsets[group_name] = { size: groupsize, replicas: replica_count, offset: offs };
+        offs += (groupsize * replica_count);
+      });
+      return offsets;
+    }
+    function generate_cdi_dynamic_content(space, group, offset) {
+      var size = 0;
+      // these nodes can be safely dropped from rendering
+      if (group.nodeName === 'name' || group.nodeName === 'description' || group.nodeName === 'repname') {
+        return ['', 0];
+      }
+      var content = '';
+      var node_data_type = group.nodeName;
+      var node_name = '';
+      var is_mapped = false;
+      var mapped = undefined;
+      var node_description = '';
+      var node_alias = String.format('cdi_{0}', Math.random()).replace(/\./g, '_');
+      for (child = 0; child < group.children.length; child++) {
+        if (group.children[child].nodeName === 'name') {
+          node_name = $(group.children[child]).text();
+        } else if (group.children[child].nodeName === 'map') {
+          is_mapped = true;
+          mapped = group.children[child];
+        } else if (group.children[child].nodeName === 'description') {
+          node_description = $(group.children[child]).text().replace(/\n/g, '<br/>');
+        }
+      };
+      if (is_mapped) {
+        size = parseInt($(group).attr('size'));
+        console.groupCollapsed('Mapped:', node_name, 'offset:', offset, 'size:', size, 'description:', node_description);
+        content += '<div class="columns">';
+        content += String.format('<div class="column"><label for="{0}">{1}:</label></div>', node_alias, node_name);
+        content += String.format('<div class="column column-6"><select id="{0}" data-offset="{1}" data-type="{2}" data-size="{3}" oninput="enable_button(\'save-{0}\')">', node_alias, offset, node_data_type, size);
+        $(mapped.children).each(function (i, e) {
+          console.log($(e).find('value').text(), '=>', $(e).find('property').text());
+          content += String.format('<option value="{0}">{1}</option>', $(e).find('property').text(), $(e).find('value').text());
+        });
+        content += '</select></div>';
+        content += String.format('<div class="column"><div class="btn-group"><button class="btn btn-primary btn-sm" id="btn-save-{0}" disabled onclick="save_cdi_field(this);">Save</button>', node_alias);
+        content += String.format('<button class="btn btn-primary btn-sm loading" id="btn-refresh-{0}" onclick="refresh_cdi_field(this);">Refresh</button></div>', node_alias);
+        content += '</div></div>';
+        content += String.format('<div class="columns"><div class="column"><small>{0}</small></div></div>', node_description);
+        cdi_loaders.push(JSON.stringify({
+          req: 'cdi',
+          ofs: offset,
+          sz: size,
+          type: node_data_type,
+          tgt: node_alias,
+          id: get_ws_msg_id()
+        }));
+        console.groupEnd();
+      } else if (node_data_type === 'group') {
+        if ($.isNumeric(parseInt($(group).attr('offset'))) && node_name === '') {
+          size = parseInt($(group).attr('offset'));
+          node_name = 'hidden'
+        }
+        if (group.children.length > 0) {
+          if (node_name != '') {
+            content += String.format('<fieldset><legend>{0}:</legend>', node_name);
+            console.groupCollapsed(node_name);
+          } else {
+            console.groupCollapsed('unnamed group');
+          }
+          content += String.format('<div class="columns"><div class="column"><small>{0}</small></div></div>', node_description);
+          $(group.children).each(function (i, e) {
+            var res = generate_cdi_dynamic_content(space, e, offset + size);
+            content += res[0];
+            size += res[1];
+          });
+          console.groupEnd();
+          if (node_name != '') {
+            content += '</fieldset>';
+          }
+        }
+      } else if (node_name !== '') {
+        if (node_data_type === 'eventid') {
+          size = 8; // events are always 8 bytes
+          node_data_type = 'evt';
+        } else {
+          if (node_data_type === 'string') {
+            node_data_type = 'str';
+          }
+          size = parseInt($(group).attr('size'));
+        }
+        console.log('Entry:', node_name, 'offset:', offset, 'size:', size, 'datatype:', node_data_type, 'description:', node_description);
+        content += '<div class="columns">';
+        content += String.format('<div class="column"><label class="form-label" for="{0}">{1}:</label></div>', node_alias, node_name);
+        content += String.format('<div class="column column-6"><input class="form-input" type="text" id="{0}" data-offset="{1}" data-type="{2}" data-size="{3}" oninput="enable_button(\'save-{0}\')"></div>', node_alias, offset, node_data_type, size);
+        content += String.format('<div class="column"><div class="btn-group"><button class="btn btn-primary btn-sm" id="btn-save-{0}" disabled onclick="save_cdi_field(this);">Save</button>', node_alias);
+        content += String.format('<button class="btn btn-primary btn-sm loading" id="btn-refresh-{0}" onclick="refresh_cdi_field(this);">Refresh</button></div>', node_alias);
+        content += '</div></div>';
+        content += String.format('<div class="columns"><div class="column"><small>{0}</small></div></div>', node_description)
+        cdi_loaders.push(JSON.stringify({
+          req: 'cdi',
+          ofs: offset,
+          sz: size,
+          type: node_data_type,
+          tgt: node_alias,
+          id: get_ws_msg_id()
+        }));
+      }
+      return [content, size];
+    }
+    function cdi_dynamic_group(cdi, space, group, target_selector, offsets, xpath = String.format("//segment[@space='{0}']/group[name[text()='{1}']]", space, group)) {
+      var nodes = cdi.evaluate(xpath, cdi);
+      var node = nodes.iterateNext();
+      var offs = offsets[group].offset;
+      var group_name = 'unnamed';
+      $(node.children).each(function (i, e) {
+        if (e.nodeName === 'name') {
+          group_name = $(e).text();
+        }
+      });
+      console.groupCollapsed(group_name, 'segment:', space);
+      if (offsets[group].replicas === 1) {
+        $(node.children).each(function (i, e) {
+          var rendered = generate_cdi_dynamic_content(space, e, offs);
+          $(target_selector).append(rendered[0]);
+          offs += rendered[1];
+        });
+      } else {
+        var group_tabs = '<ul class="tab tab-block">';
+        var group_content = '';
+        var alias = $(node).find('repname').text();
+        var group_id = group.replace(/ /g, '_');
+        for (replica = 1; replica <= offsets[group].replicas; replica++) {
+          console.groupCollapsed(alias, replica);
+          group_tabs += String.format('<li class="tab-item"><a href="#" class="btn btn-primary" id="{0}-{1}">{2} {1}</a></li>', group_id, replica, alias);
+          group_content += String.format('<div class="container" id="rep-{0}-{1}" style="display:{3};"><fieldset><legend>{2} {1}</legend>', group_id, replica, alias, replica > 1 ? 'none' : 'block');
+          $(node).children().each(function (i, e) {
+            var rendered = generate_cdi_dynamic_content(space, e, offs);
+            group_content += rendered[0];
+            offs += rendered[1];
+          });
+          group_content += '</fieldset></div>';
+          console.groupEnd();
+        }
+        group_tabs += "</ul>";
+        $(target_selector).append(group_tabs);
+        $(target_selector).append(group_content);
+        $(String.format('[id^={0}-]', group_id)).on('click', function (evt) {
+          var selected_tab = $(evt.target).attr('id');
+          var tab_group = selected_tab.substring(0, selected_tab.lastIndexOf('-'));
+          $(String.format('[id^=rep-{0}', tab_group)).filter(function (i, e) { return $(e).attr('id') != $(evt.target).attr('id'); }).each(function (i, other_tab) {
+            $('#' + $(other_tab).attr('id')).hide();
+            $(other_tab).removeClass('active');
+            $(other_tab).addClass('inactive');
+            return true;
+          });
+          var tab_content = String.format('#rep-{0}', selected_tab);
+          $(tab_content).show();
+          $(evt.target).addClass('active');
+          $(evt.target).removeClass('inactive');
+        });
+      }
+      console.groupEnd();
+    }
+  </script>
+</body>
+
+</html>

@@ -29,10 +29,9 @@ License along with NeoPixel.  If not, see
 #ifdef ARDUINO
 #include <Arduino.h>
 #else
-#include <esp_system.h>
-#define millis() (esp_timer_get_time() / 1000)
-#endif
 #include <stdint.h>
+unsigned long millis();
+#endif
 #include "internal/NeoEase.h"
 
 enum AnimationState

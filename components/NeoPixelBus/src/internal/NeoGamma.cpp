@@ -24,10 +24,6 @@ License along with NeoPixel.  If not, see
 <http://www.gnu.org/licenses/>.
 -------------------------------------------------------------------------*/
 
-#ifdef ARDUINO
-#include <Arduino.h>
-#endif
-#include <stdint.h>
 #include "NeoPixelBus.h"
 
 const uint8_t NeoGammaTableMethod::_table[] = {

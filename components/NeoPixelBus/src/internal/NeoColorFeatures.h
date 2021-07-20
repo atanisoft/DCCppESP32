@@ -26,13 +26,6 @@ License along with NeoPixel.  If not, see
 -------------------------------------------------------------------------*/
 #pragma once
 
-#include <stdint.h>
-
-#ifndef pgm_read_byte
-#define pgm_read_byte(addr)   (*(const unsigned char *)(addr))
-#endif
-#include <stdint.h>
-
 class Neo3Elements
 {
 public:
@@ -154,7 +147,6 @@ public:
     typedef RgbwColor ColorObject;
 };
 
- 
 class Neo3ElementsNoSettings : public Neo3Elements
 {
 public:

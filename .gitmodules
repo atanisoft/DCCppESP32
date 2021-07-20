@@ -1,0 +1,6 @@
+[submodule "components/OpenMRNIDF"]
+	path = components/OpenMRNIDF
+	url = https://github.com/atanisoft/OpenMRNIDF.git
+[submodule "components/HttpServer"]
+	path = components/HttpServer
+	url = https://github.com/atanisoft/HttpServer.git

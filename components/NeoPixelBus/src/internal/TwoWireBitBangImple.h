@@ -30,63 +30,69 @@ License along with NeoPixel.  If not, see
 class TwoWireBitBangImple
 {
 public:
-	TwoWireBitBangImple(uint8_t pinClock, uint8_t pinData) :
-		_pinClock(pinClock),
-		_pinData(pinData)
-	{
-		pinMode(pinClock, OUTPUT);
-		pinMode(pinData, OUTPUT);
-	}
+    typedef NeoNoSettings SettingsObject;
 
-	~TwoWireBitBangImple()
-	{
-		pinMode(_pinClock, INPUT);
-		pinMode(_pinData, INPUT);
-	}
+    TwoWireBitBangImple(uint8_t pinClock, uint8_t pinData) :
+        _pinClock(pinClock),
+        _pinData(pinData)
+    {
+        pinMode(pinClock, OUTPUT);
+        pinMode(pinData, OUTPUT);
+    }
 
-	void begin()
-	{
-		digitalWrite(_pinClock, LOW);
-		digitalWrite(_pinData, LOW);
-	}
+    ~TwoWireBitBangImple()
+    {
+        pinMode(_pinClock, INPUT);
+        pinMode(_pinData, INPUT);
+    }
 
-	void beginTransaction()
-	{
+    void begin()
+    {
+        digitalWrite(_pinClock, LOW);
+        digitalWrite(_pinData, LOW);
+    }
 
-	}
+    void beginTransaction()
+    {
 
-	void endTransaction()
-	{
-		digitalWrite(_pinData, LOW);
-	}
+    }
 
-	void transmitByte(uint8_t data)
-	{
-		for (int bit = 7; bit >= 0; bit--)
-		{
-			// set data bit on pin
-			digitalWrite(_pinData, (data & 0x80) == 0x80 ? HIGH : LOW);
+    void endTransaction()
+    {
+        digitalWrite(_pinData, LOW);
+    }
 
-			// set clock high as data is ready
-			digitalWrite(_pinClock, HIGH);
+    void transmitByte(uint8_t data)
+    {
+        for (int bit = 7; bit >= 0; bit--)
+        {
+            // set data bit on pin
+            digitalWrite(_pinData, (data & 0x80) == 0x80 ? HIGH : LOW);
 
-			data <<= 1;
+            // set clock high as data is ready
+            digitalWrite(_pinClock, HIGH);
 
-			// set clock low as data pin is changed
-			digitalWrite(_pinClock, LOW);
-		}
-	}
+            data <<= 1;
 
-	void transmitBytes(const uint8_t* data, size_t dataSize)
-	{
-		const uint8_t* endData = data + dataSize;
-		while (data < endData)
-		{
-			transmitByte(*data++);
-		}
-	}
+            // set clock low as data pin is changed
+            digitalWrite(_pinClock, LOW);
+        }
+    }
+
+    void transmitBytes(const uint8_t* data, size_t dataSize)
+    {
+        const uint8_t* endData = data + dataSize;
+        while (data < endData)
+        {
+            transmitByte(*data++);
+        }
+    }
+
+    void applySettings(const SettingsObject& settings)
+    {
+    }
 
 private:
-	const uint8_t  _pinClock;     // output pin number for clock line
-	const uint8_t  _pinData;      // output pin number for data line
+    const uint8_t  _pinClock;     // output pin number for clock line
+    const uint8_t  _pinData;      // output pin number for data line
 };

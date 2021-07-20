@@ -10,49 +10,26 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.target }}
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 2
-      matrix:
-        target: [ESP32CommandStation, ESP32CommandStation.pcb]
     steps:
-    - name: Checkout ESP32CommandStation
-      uses: actions/checkout@v1
-    - name: Checkout ESP-IDF v4
-      uses: actions/checkout@v1
-      with:
-        repository: espressif/esp-idf
-        ref: release/v4.0
-        submodules: true
-    - name: Set up Python 3.5
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.5
-    - name: Install Python Wheel
-      run: pip install wheel
-    - name: Install ESP32 toolchain
-      run: |
-        mkdir toolchain
-        curl -k https://dl.espressif.com/dl/xtensa-esp32-elf-gcc8_4_0-esp-2020r3-linux-amd64.tar.gz | tar zxv -C toolchain
-    - name: Configure CMake
-      uses: jwlawson/actions-setup-cmake@v1.4
-      with:
-        cmake-version: '3.17'
-    - name: Configure Ninja
-      uses: seanmiddleditch/gha-setup-ninja@master
-    - name: build
-      run: bash .github/build.sh ${{ matrix.target }}
-    - name: Set up Python 2.7
-      uses: actions/setup-python@v1
-      with:
-        python-version: 2.7
-    - name: Analyze Ninja Build log
-      run: python .github/ninja-log-analyze.py -C build
-    - name: Package binaries
-      uses: actions/upload-artifact@v1
-      with:
-        name: ${{ matrix.target }}
-        path: binaries
-      env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Build
+        uses: espressif/esp-idf-ci-action@release-v4.3
+      - name: Prepare Binaries
+        run: |
+          mkdir -p binaries
+          cp .github/firmwarereadme.txt binaries/readme.txt
+          cp build/ESP32CommandStation.bin binaries
+          cp build/partition_table/partition-table.bin binaries
+          cp build/ota_data_initial.bin binaries
+          cp build/bootloader/bootloader.bin binaries
+      - name: Package binaries
+        uses: actions/upload-artifact@v1
+        with:
+          name: ESP32CommandStation
+          path: binaries
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,5 +1,5 @@
 /*-------------------------------------------------------------------------
-NeoPixel library helper functions for DotStars using general Pins (APA102/LPD8806).
+NeoPixel library helper functions for DotStars using SPI (APA102/LPD8806).
 
 Written by Michael C. Miller.
 
@@ -31,85 +31,173 @@ License along with NeoPixel.  If not, see
 class SpiSpeed40Mhz
 {
 public:
+    typedef NeoNoSettings SettingsObject;
+    SpiSpeed40Mhz() {};
+
+    static void applySettings(const SettingsObject& settings) {}
+
     static const uint32_t Clock = 40000000L;
 };
 
 class SpiSpeed20Mhz
 {
 public:
-	static const uint32_t Clock = 20000000L;
+    typedef NeoNoSettings SettingsObject;
+    SpiSpeed20Mhz() {};
+
+    static void applySettings(const SettingsObject& settings) {}
+
+    static const uint32_t Clock = 20000000L;
 };
 
 class SpiSpeed10Mhz
 {
 public:
-	static const uint32_t Clock = 10000000L;
+    typedef NeoNoSettings SettingsObject;
+    SpiSpeed10Mhz() {};
+
+    static void applySettings(const SettingsObject& settings) {}
+
+    static const uint32_t Clock = 10000000L;
+};
+
+class SpiSpeed5Mhz
+{
+public:
+    typedef NeoNoSettings SettingsObject;
+    SpiSpeed5Mhz() {};
+
+    static void applySettings(const SettingsObject& settings) {}
+
+    static const uint32_t Clock = 5000000L;
 };
 
 class SpiSpeed2Mhz
 {
 public:
-	static const uint32_t Clock = 2000000L;
+    typedef NeoNoSettings SettingsObject;
+    SpiSpeed2Mhz() {};
+
+    static void applySettings(const SettingsObject& settings) {}
+
+    static const uint32_t Clock = 2000000L;
+};
+
+class SpiSpeed1Mhz
+{
+public:
+    typedef NeoNoSettings SettingsObject;
+    SpiSpeed1Mhz() {};
+
+    static void applySettings(const SettingsObject& settings) {}
+
+    static const uint32_t Clock = 1000000L;
+};
+
+class SpiSpeed500Khz
+{
+public:
+    typedef NeoNoSettings SettingsObject;
+    SpiSpeed500Khz() {};
+
+    static void applySettings(const SettingsObject& settings) {}
+
+    static const uint32_t Clock = 500000L;
+};
+
+class NeoSpiSettings
+{
+public:
+    NeoSpiSettings(uint32_t clock) :
+        Clock(clock)
+    {
+    }
+    uint32_t Clock;
+};
+
+class SpiSpeedHz
+{
+public:
+    typedef NeoSpiSettings SettingsObject;
+
+    SpiSpeedHz() :
+        Clock(10000000)
+    {};
+
+    void applySettings(const SettingsObject& settings)
+    {
+        Clock = settings.Clock;
+    }
+
+    uint32_t Clock;
 };
 
 template<typename T_SPISPEED> class TwoWireSpiImple
 {
 public:
-	TwoWireSpiImple(uint8_t, uint8_t) // clock and data pins ignored for hardware SPI
-	{
-	}
+    typedef typename T_SPISPEED::SettingsObject SettingsObject;
 
-	~TwoWireSpiImple()
-	{
-		SPI.end();
-	}
+    TwoWireSpiImple(uint8_t, uint8_t) // clock and data pins ignored for hardware SPI
+    {
+    }
+
+    ~TwoWireSpiImple()
+    {
+        SPI.end();
+    }
 
 #if defined(ARDUINO_ARCH_ESP32)
-	// for cases where hardware SPI can have pins changed
-	void begin(int8_t sck, int8_t miso, int8_t mosi, int8_t ss)
-	{
-		SPI.begin(sck, miso, mosi, ss);
-	}
+    // for cases where hardware SPI can have pins changed
+    void begin(int8_t sck, int8_t miso, int8_t mosi, int8_t ss)
+    {
+        SPI.begin(sck, miso, mosi, ss);
+    }
 #endif
 
-	void begin()
-	{
-		SPI.begin();
-	}
+    void begin()
+    {
+        SPI.begin();
+    }
 
-	void beginTransaction()
-	{
-		SPI.beginTransaction(SPISettings(T_SPISPEED::Clock, MSBFIRST, SPI_MODE0));
-	}
+    void beginTransaction()
+    {
+        SPI.beginTransaction(SPISettings(_speed.Clock, MSBFIRST, SPI_MODE0));
+    }
 
-	void endTransaction()
-	{
-		SPI.endTransaction();
-	}
+    void endTransaction()
+    {
+        SPI.endTransaction();
+    }
 
-	void transmitByte(uint8_t data)
-	{
-		SPI.transfer(data);
-	}
+    void transmitByte(uint8_t data)
+    {
+        SPI.transfer(data);
+    }
 
-	void transmitBytes(const uint8_t* data, size_t dataSize)
-	{
+    void transmitBytes(const uint8_t* data, size_t dataSize)
+    {
 #if defined(ARDUINO_ARCH_ESP8266) || defined(ARDUINO_ARCH_ESP32)
-		// ESPs have a method to write without inplace overwriting the send buffer
-		// since we don't care what gets received, use it for performance
-		// FIX: but for what ever reason on Esp32, its not const
-		SPI.writeBytes(const_cast<uint8_t*>(data), dataSize);
+        // ESPs have a method to write without inplace overwriting the send buffer
+        // since we don't care what gets received, use it for performance
+        // FIX: but for what ever reason on Esp32, its not const
+        SPI.writeBytes(const_cast<uint8_t*>(data), dataSize);
 
 #else
-		// default ARDUINO transfer inplace overwrites the send buffer
-		// which is bad in this case, so we have to send one byte at a time
-		const uint8_t* endData = data + dataSize;
-		while (data < endData)
-		{
-			SPI.transfer(*data++);
-		}
+        // default ARDUINO transfer inplace overwrites the send buffer
+        // which is bad in this case, so we have to send one byte at a time
+        const uint8_t* endData = data + dataSize;
+        while (data < endData)
+        {
+            SPI.transfer(*data++);
+        }
 #endif
-	}
+    }
+
+    void applySettings(const SettingsObject& settings)
+    {
+        _speed.applySettings(settings);
+    }
 
 private:
+    T_SPISPEED _speed;
 };

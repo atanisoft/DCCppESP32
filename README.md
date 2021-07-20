@@ -1,9 +1,9 @@
 # What is ESP32 Command Station
-ESP32 Command Station is an open-source hardware and software Command Station for the operation of DCC decoder equipped model railroads.
+ESP32 Command Station is an open-source hardware and software OpenLCB enabled Command Station for the operation of DCC decoder equipped model railroads.
 
-The ESP32 Command Station consists of an ESP32 module with up to two h-bridge devices to generate the DCC signal for the tracks.
+The ESP32 Command Station consists of an ESP32 module with up to two h-bridge devices to generate the DCC signal for the tracks. Note that only one h-bridge will be enabled at any given time, it is not possible to use both OPS and PROG tracks simultaneously. It is also possible to disable either the OPS or PROG track output entirely via configuration settings.
 
-A more advanced ESP32 Command Station could have some/all of the following:
+Support for the following add-ons is available:
 1. CAN transceiver (MCP2551 or SN65HVD23X) for LCC CAN connectivity.
 2. OLED or LCD display for command station status.
 3. Addressable RGB LEDs for visual status indicators.

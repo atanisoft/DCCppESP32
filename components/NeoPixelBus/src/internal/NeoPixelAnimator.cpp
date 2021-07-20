@@ -27,6 +27,14 @@ License along with NeoPixel.  If not, see
 #include "NeoPixelBus.h"
 #include "NeoPixelAnimator.h"
 
+#if !defined(ARDUINO) && defined(ESP32)
+#include <esp_timer.h>
+unsigned long millis()
+{
+    return (unsigned long) (esp_timer_get_time() / 1000ULL);
+}
+#endif
+
 NeoPixelAnimator::NeoPixelAnimator(uint16_t countAnimations, uint16_t timeScale) :
     _countAnimations(countAnimations),
     _animationLastTick(0),

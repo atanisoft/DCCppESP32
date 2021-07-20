@@ -35,8 +35,17 @@ typedef float(*AnimEaseFunction)(float unitValue);
 #undef max
 #undef min
 #include <functional>
+#include <cmath>
+
 typedef std::function<float(float unitValue)> AnimEaseFunction;
 
+#endif
+
+#ifndef PI
+#define PI 3.1415926535897932384626433832795
+#endif
+#ifndef HALF_PI
+#define HALF_PI 1.5707963267948966192313216916398
 #endif
 
 class NeoEase

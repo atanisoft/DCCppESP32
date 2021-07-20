@@ -26,15 +26,32 @@ License along with NeoPixel.  If not, see
 -------------------------------------------------------------------------*/
 #pragma once
 
-#ifndef pgm_read_byte
-#define pgm_read_byte(addr)   (*(const unsigned char *)(addr))
-#endif
-#include <stdint.h>
+class Lpd88063ElementsNoSettings
+{
+public:
+    typedef NeoNoSettings SettingsObject;
+    static const size_t SettingsSize = 0;
 
-class Lpd88063Elements
+    static void applySettings(uint8_t*, const SettingsObject&)
+    {
+    }
+
+    static uint8_t* pixels(uint8_t* pData)
+    {
+        return pData;
+    }
+
+    static const uint8_t* pixels(const uint8_t* pData)
+    {
+        return pData;
+    }
+};
+
+class Lpd88063Elements : public Lpd88063ElementsNoSettings
 {
 public:
     static const size_t PixelSize = 3; 
+
 
     static uint8_t* getPixelAddress(uint8_t* pPixels, uint16_t indexPixel)
     {
@@ -97,38 +114,38 @@ public:
 class  Lpd8806BrgFeature : public Lpd88063Elements
 {
 public:
-	static void applyPixelColor(uint8_t* pPixels, uint16_t indexPixel, ColorObject color)
-	{
-		uint8_t* p = getPixelAddress(pPixels, indexPixel);
+    static void applyPixelColor(uint8_t* pPixels, uint16_t indexPixel, ColorObject color)
+    {
+        uint8_t* p = getPixelAddress(pPixels, indexPixel);
 
-		*p++ = (color.B >> 1) | 0x80;
-		*p++ = (color.R >> 1) | 0x80;
-		*p = (color.G >> 1) | 0x80;
-	}
+        *p++ = (color.B >> 1) | 0x80;
+        *p++ = (color.R >> 1) | 0x80;
+        *p = (color.G >> 1) | 0x80;
+    }
 
-	static ColorObject retrievePixelColor(const uint8_t* pPixels, uint16_t indexPixel)
-	{
-		ColorObject color;
-		const uint8_t* p = getPixelAddress(pPixels, indexPixel);
+    static ColorObject retrievePixelColor(const uint8_t* pPixels, uint16_t indexPixel)
+    {
+        ColorObject color;
+        const uint8_t* p = getPixelAddress(pPixels, indexPixel);
 
-		color.B = (*p++) << 1;
-		color.R = (*p++) << 1;
-		color.G = (*p) << 1;
+        color.B = (*p++) << 1;
+        color.R = (*p++) << 1;
+        color.G = (*p) << 1;
 
-		return color;
-	}
+        return color;
+    }
 
-	static ColorObject retrievePixelColor_P(PGM_VOID_P pPixels, uint16_t indexPixel)
-	{
-		ColorObject color;
-		const uint8_t* p = getPixelAddress((const uint8_t*)pPixels, indexPixel);
+    static ColorObject retrievePixelColor_P(PGM_VOID_P pPixels, uint16_t indexPixel)
+    {
+        ColorObject color;
+        const uint8_t* p = getPixelAddress((const uint8_t*)pPixels, indexPixel);
 
-		color.B = (pgm_read_byte(p++)) << 1;
-		color.R = (pgm_read_byte(p++)) << 1;
-		color.G = (pgm_read_byte(p)) << 1;
+        color.B = (pgm_read_byte(p++)) << 1;
+        color.R = (pgm_read_byte(p++)) << 1;
+        color.G = (pgm_read_byte(p)) << 1;
 
-		return color;
-	}
+        return color;
+    }
 
 };
 
@@ -169,4 +186,3 @@ public:
     }
 
 };
-

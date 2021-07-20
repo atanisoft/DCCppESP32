@@ -27,8 +27,9 @@ License along with NeoPixel.  If not, see
 
 #ifdef ARDUINO
 #include <Arduino.h>
-#endif
+#else
 #include <stdint.h>
+#endif
 
 struct RgbColor;
 struct HslColor;
@@ -75,7 +76,7 @@ struct RgbwColor
     // ------------------------------------------------------------------------
     // Construct a RgbwColor using HtmlColor
     // ------------------------------------------------------------------------
-    RgbwColor(const HtmlColor& color);
+    //RgbwColor(const HtmlColor& color);
 
     // ------------------------------------------------------------------------
     // Construct a RgbwColor using HslColor
@@ -229,4 +230,3 @@ private:
         return element;
     }
 };
-
